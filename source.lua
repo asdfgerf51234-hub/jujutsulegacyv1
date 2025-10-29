@@ -1,14 +1,11 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
-
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
-
 local SetTechnique = ReplicatedStorage:WaitForChild("SetTechnique")
 local SetRace = ReplicatedStorage:WaitForChild("SetRace")
 local SetClan = ReplicatedStorage:WaitForChild("SetClan")
 local information = ReplicatedStorage:WaitForChild("RemoteEvent"):WaitForChild("information")
-
 local TweenService = game:GetService("TweenService")
 local lp = Players.LocalPlayer
 local Stats = lp:WaitForChild("Stats")
@@ -19,7 +16,6 @@ local auraRunning = false
 local crashRunning = false
 local serverCrasherV2Running = false
 local chamsEnabled = false
-
 local farmingThread
 local auraCoroutine
 local crashCoroutine
@@ -146,12 +142,10 @@ local function farmLoop()
         local quest = findQuestForLevel(currentLevel)
         tweenTo(quest.cf)
         task.wait(0.4)
-
         local prompt = getNearestPrompt(quest.cf)
         if prompt then
             fireproximityprompt(prompt)
         end
-
         task.wait(2)
         local enemy = findEnemyForLevel(currentLevel)
         tweenTo(enemy.cf)
@@ -163,11 +157,7 @@ local Window = Rayfield:CreateWindow({
     Name = "JJ Legacy V1",
     LoadingTitle = "Loading...",
     LoadingSubtitle = "Made By Starman999_",
-    ConfigurationSaving = {
-        Enabled = true,
-        FolderName = nil,
-        FileName = "JJLegacyV1Config"
-    },
+    ConfigurationSaving = { Enabled = true, FolderName = nil, FileName = "JJLegacyV1Config" },
     KeySystem = false,
     Theme = "DiscordBlack"
 })
@@ -291,7 +281,6 @@ FarmingTab:CreateToggle({
     end,
 })
 
--- Misc Tab: Chams
 local function applyChams(character)
     for _, part in ipairs(character:GetChildren()) do
         if part:IsA("BasePart") then
