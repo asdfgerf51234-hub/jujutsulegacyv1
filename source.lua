@@ -1,13 +1,16 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+
 local player = Players.LocalPlayer
+local lp = player
 local SetTechnique = ReplicatedStorage:WaitForChild("SetTechnique")
 local SetRace = ReplicatedStorage:WaitForChild("SetRace")
 local SetClan = ReplicatedStorage:WaitForChild("SetClan")
 local information = ReplicatedStorage:WaitForChild("RemoteEvent"):WaitForChild("information")
-local TweenService = game:GetService("TweenService")
-local lp = Players.LocalPlayer
 local Stats = lp:WaitForChild("Stats")
 local level = Stats:WaitForChild("Level")
 
@@ -16,10 +19,14 @@ local auraRunning = false
 local crashRunning = false
 local serverCrasherV2Running = false
 local chamsEnabled = false
+local speedEnabled = false
+local speedValue = 16
+
 local farmingThread
 local auraCoroutine
 local crashCoroutine
 local serverCrasherV2Coroutine
+local chamsConnections = {}
 
 local QuestData = {
     { name = "gojo", level = 1, cf = CFrame.new(-3988.375, 1190.24219, -3920.59131) },
@@ -153,8 +160,80 @@ local function farmLoop()
     end
 end
 
+local function applyChams(character)
+    if not character then return end
+    for _, part in ipairs(character:GetDescendants()) do
+        if part:IsA("BasePart") then
+            local hl = part:FindFirstChildOfClass("Highlight")
+            if not hl then
+                hl = Instance.new("Highlight")
+                hl.Name = "ChamHighlight"
+                hl.FillColor = Color3.fromRGB(255, 0, 0)
+                hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                hl.FillTransparency = 0.5
+                hl.OutlineTransparency = 0
+                hl.Adornee = part
+                hl.Parent = part
+            end
+        end
+    end
+end
+
+local function removeChams(character)
+    if not character then return end
+    for _, part in ipairs(character:GetDescendants()) do
+        local hl = part:FindFirstChildOfClass("Highlight")
+        if hl then hl:Destroy() end
+    end
+end
+
+local function toggleChams(state)
+    chamsEnabled = state
+    for _, conn in pairs(chamsConnections) do
+        if conn.Connected then conn:Disconnect() end
+    end
+    chamsConnections = {}
+    if not state then
+        for _, plr in Players:GetPlayers() do
+            if plr ~= lp and plr.Character then
+                removeChams(plr.Character)
+            end
+        end
+        return
+    end
+    for _, plr in Players:GetPlayers() do
+        if plr ~= lp and plr.Character then
+            applyChams(plr.Character)
+        end
+    end
+    local conn = Players.PlayerAdded:Connect(function(plr)
+        if plr == lp then return end
+        plr.CharacterAdded:Connect(function(char)
+            if chamsEnabled then applyChams(char) end
+        end)
+    end)
+    table.insert(chamsConnections, conn)
+end
+
+local function setSpeed(value)
+    local hum = lp.Character and lp.Character:FindFirstChildOfClass("Humanoid")
+    if hum then
+        hum.WalkSpeed = speedEnabled and value or 16
+    end
+end
+
+local function toggleSpeed(state)
+    speedEnabled = state
+    setSpeed(speedValue)
+end
+
+lp.CharacterAdded:Connect(function()
+    task.wait(0.5)
+    if speedEnabled then setSpeed(speedValue) end
+end)
+
 local Window = Rayfield:CreateWindow({
-    Name = "JJ Legacy V1",
+    Name = "Jujutsu Legacy v1.25",
     LoadingTitle = "Loading...",
     LoadingSubtitle = "Made By Starman999_",
     ConfigurationSaving = { Enabled = true, FolderName = nil, FileName = "JJLegacyV1Config" },
@@ -169,49 +248,16 @@ local MiscTab = Window:CreateTab("Misc")
 UsefulTab:CreateParagraph({ Title = "", Content = "spinnable stuff only :(" })
 
 local techniqueValue = ""
-UsefulTab:CreateInput({
-    Name = "Technique",
-    PlaceholderText = "Type technique",
-    Callback = function(text) techniqueValue = text end,
-})
-UsefulTab:CreateButton({
-    Name = "Set Technique",
-    Callback = function()
-        if techniqueValue ~= "" then
-            SetTechnique:FireServer("Boogie Woogie", techniqueValue, 1, 0.001)
-        end
-    end,
-})
+UsefulTab:CreateInput({ Name = "Technique", PlaceholderText = "Type technique", Callback = function(text) techniqueValue = text end })
+UsefulTab:CreateButton({ Name = "Set Technique", Callback = function() if techniqueValue ~= "" then SetTechnique:FireServer("Boogie Woogie", techniqueValue, 1, 0.001) end end })
 
 local raceValue = ""
-UsefulTab:CreateInput({
-    Name = "Race",
-    PlaceholderText = "Type race",
-    Callback = function(text) raceValue = text end,
-})
-UsefulTab:CreateButton({
-    Name = "Set Race",
-    Callback = function()
-        if raceValue ~= "" then
-            SetRace:FireServer("None", raceValue, 1, 0.1)
-        end
-    end,
-})
+UsefulTab:CreateInput({ Name = "Race", PlaceholderText = "Type race", Callback = function(text) raceValue = text end })
+UsefulTab:CreateButton({ Name = "Set Race", Callback = function() if raceValue ~= "" then SetRace:FireServer("None", raceValue, 1, 0.1) end end })
 
 local clanValue = ""
-UsefulTab:CreateInput({
-    Name = "Clan",
-    PlaceholderText = "Type clan",
-    Callback = function(text) clanValue = text end,
-})
-UsefulTab:CreateButton({
-    Name = "Set Clan",
-    Callback = function()
-        if clanValue ~= "" then
-            SetClan:FireServer("None", clanValue, 1, 0.1)
-        end
-    end,
-})
+UsefulTab:CreateInput({ Name = "Clan", PlaceholderText = "Type clan", Callback = function(text) clanValue = text end })
+UsefulTab:CreateButton({ Name = "Set Clan", Callback = function() if clanValue ~= "" then SetClan:FireServer("None", clanValue, 1, 0.1) end end })
 
 FarmingTab:CreateToggle({
     Name = "Toggle Auto Farm",
@@ -230,15 +276,13 @@ FarmingTab:CreateToggle({
     Callback = function(value)
         auraRunning = value
         if auraRunning then
-            if not auraCoroutine or coroutine.status(auraCoroutine) == "dead" then
-                auraCoroutine = coroutine.create(function()
-                    while auraRunning do
-                        information:FireServer("TojiNormal", "UseV")
-                        task.wait(0.1)
-                    end
-                end)
-                coroutine.resume(auraCoroutine)
-            end
+            auraCoroutine = coroutine.create(function()
+                while auraRunning do
+                    information:FireServer("TojiNormal", "UseV")
+                    task.wait(0.1)
+                end
+            end)
+            coroutine.resume(auraCoroutine)
         end
     end,
 })
@@ -249,15 +293,13 @@ FarmingTab:CreateToggle({
     Callback = function(value)
         crashRunning = value
         if crashRunning then
-            if not crashCoroutine or coroutine.status(crashCoroutine) == "dead" then
-                crashCoroutine = coroutine.create(function()
-                    while crashRunning do
-                        information:FireServer("Gojo", "UseV")
-                        task.wait(0.1)
-                    end
-                end)
-                coroutine.resume(crashCoroutine)
-            end
+            crashCoroutine = coroutine.create(function()
+                while crashRunning do
+                    information:FireServer("Gojo", "UseV")
+                    task.wait(0.1)
+                end
+            end)
+            coroutine.resume(crashCoroutine)
         end
     end,
 })
@@ -268,64 +310,41 @@ FarmingTab:CreateToggle({
     Callback = function(value)
         serverCrasherV2Running = value
         if serverCrasherV2Running then
-            if not serverCrasherV2Coroutine or coroutine.status(serverCrasherV2Coroutine) == "dead" then
-                serverCrasherV2Coroutine = coroutine.create(function()
-                    while serverCrasherV2Running do
-                        information:FireServer("HeianSukunaNew", "UseG")
-                        task.wait(0.1)
-                    end
-                end)
-                coroutine.resume(serverCrasherV2Coroutine)
-            end
+            serverCrasherV2Coroutine = coroutine.create(function()
+                while serverCrasherV2Running do
+                    information:FireServer("HeianSukunaNew", "UseG")
+                    task.wait(0.1)
+                end
+            end)
+            coroutine.resume(serverCrasherV2Coroutine)
         end
     end,
 })
-
-local function applyChams(character)
-    for _, part in ipairs(character:GetChildren()) do
-        if part:IsA("BasePart") then
-            local highlight = part:FindFirstChild("ChamHighlight")
-            if not highlight then
-                highlight = Instance.new("Highlight", part)
-                highlight.Name = "ChamHighlight"
-                highlight.FillColor = Color3.new(1, 0, 0)
-                highlight.OutlineColor = Color3.new(1, 1, 1)
-            end
-        end
-    end
-end
-
-local function removeChams(character)
-    for _, part in ipairs(character:GetChildren()) do
-        if part:IsA("BasePart") then
-            local highlight = part:FindFirstChild("ChamHighlight")
-            if highlight then
-                highlight:Destroy()
-            end
-        end
-    end
-end
-
-local function toggleChams(state)
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= lp and plr.Character then
-            if state then
-                applyChams(plr.Character)
-                plr.CharacterAdded:Connect(applyChams)
-            else
-                removeChams(plr.Character)
-            end
-        end
-    end
-end
 
 MiscTab:CreateToggle({
     Name = "Enable Chams",
     CurrentValue = false,
     Callback = function(state)
-        chamsEnabled = state
-        task.spawn(function()
-            toggleChams(state)
-        end)
+        task.spawn(function() toggleChams(state) end)
+    end,
+})
+
+MiscTab:CreateToggle({
+    Name = "Enable Speed Hack",
+    CurrentValue = false,
+    Callback = function(state)
+        toggleSpeed(state)
+    end,
+})
+
+MiscTab:CreateSlider({
+    Name = "Speed Value",
+    Range = {16, 500},
+    Increment = 1,
+    Suffix = " WS",
+    CurrentValue = 16,
+    Callback = function(value)
+        speedValue = value
+        if speedEnabled then setSpeed(value) end
     end,
 })
