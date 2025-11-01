@@ -20,6 +20,9 @@ local crashRunning = false
 local serverCrasherV2Running = false
 local chamsEnabled = false
 local speedEnabled = false
+local instaKillBossFarmActive = false
+local selectedBosses = {"Infected Gojo"}
+
 local speedValue = 16
 
 local farmingThread
@@ -27,6 +30,7 @@ local auraCoroutine
 local crashCoroutine
 local serverCrasherV2Coroutine
 local chamsConnections = {}
+local bossFarmThread
 
 local QuestData = {
     { name = "gojo", level = 1, cf = CFrame.new(-3988.375, 1190.24219, -3920.59131) },
@@ -98,6 +102,12 @@ local EnemyData = {
     { level = 10000, cf = CFrame.new(2084.09863, 1180.29639, -4997.74854) }
 }
 
+local bossCFrames = {
+    ["Yuji Shinjuku"] = CFrame.new(3011.909180, 1180.296387, -5041.400879, 0.688311, 0, 0.725416, 0, 1, 0, -0.725416, 0, 0.688311),
+    ["Infected Gojo"] = CFrame.new(2704.337891, 1180.296387, -5033.666016, 0.322550, 0, 0.946552, 0, 1, 0, -0.946552, 0, 0.322550),
+    ["Heian Era Sukuna"] = CFrame.new(3764.334229, 1180.796387, -5060.624512, 0.254096, 0, 0.967179, 0, 1, 0, -0.967179, 0, 0.254096)
+}
+
 local function findQuestForLevel(lv)
     local quest = QuestData[1]
     for _, v in ipairs(QuestData) do
@@ -157,6 +167,25 @@ local function farmLoop()
         local enemy = findEnemyForLevel(currentLevel)
         tweenTo(enemy.cf)
         task.wait(2)
+    end
+end
+
+local function instaKillBossFarmLoop()
+    while instaKillBossFarmActive do
+        for _, bossName in ipairs(selectedBosses) do
+            local bossCF = bossCFrames[bossName] or CFrame.new(0,0,0)
+            tweenTo(bossCF)
+            task.wait(0.5)
+            local bossPath = workspace.Enemies:FindFirstChild(bossName)
+            if bossPath and bossPath:FindFirstChild("Humanoid") then
+                pcall(function()
+                    information:FireServer("TojiNormal", "UseV")
+                end)
+                task.wait(0.1)
+                bossPath.Humanoid.Health = 0
+            end
+            task.wait(1)
+        end
     end
 end
 
@@ -233,7 +262,7 @@ lp.CharacterAdded:Connect(function()
 end)
 
 local Window = Rayfield:CreateWindow({
-    Name = "Jujutsu Legacy v1.25",
+    Name = "Jujutsu Legacy v2",
     LoadingTitle = "Loading...",
     LoadingSubtitle = "Made By Starman999_",
     ConfigurationSaving = { Enabled = true, FolderName = nil, FileName = "JJLegacyV1Config" },
@@ -317,6 +346,30 @@ FarmingTab:CreateToggle({
                 end
             end)
             coroutine.resume(serverCrasherV2Coroutine)
+        end
+    end,
+})
+
+FarmingTab:CreateDropdown({
+    Name = "Select Bosses",
+    Options = {"Infected Gojo", "Yuji Shinjuku", "Heian Era Sukuna"},
+    CurrentOption = {"Infected Gojo"},
+    MultiSelect = true,
+    Callback = function(option)
+        selectedBosses = option
+    end
+})
+
+FarmingTab:CreateToggle({
+    Name = "Insta Kill Boss Farm",
+    CurrentValue = false,
+    Callback = function(value)
+        instaKillBossFarmActive = value
+        if instaKillBossFarmActive and not bossFarmThread then
+            bossFarmThread = task.spawn(instaKillBossFarmLoop)
+        elseif not instaKillBossFarmActive and bossFarmThread then
+            task.cancel(bossFarmThread)
+            bossFarmThread = nil
         end
     end,
 })
